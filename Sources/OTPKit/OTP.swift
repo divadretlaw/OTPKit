@@ -7,10 +7,25 @@ open class OTP {
     // DIGITS_POWER                              0   1    2     3      4       5        6         7          8
     private static let DIGITS_POWER: [UInt32] = [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000]
     
-    public enum Mode {
-        case sha1
-        case sha256
-        case sha512
+    public enum Mode: Int, CaseIterable, Identifiable {
+        case sha1 = 0
+        case sha256 = 1
+        case sha512 = 2
+        
+        public var id: Int { rawValue }
+        
+        public init?(rawValue: Int) {
+            switch rawValue {
+            case 0:
+                self = .sha1
+            case 1:
+                self = .sha256
+            case 2:
+                self = .sha512
+            default:
+                return nil
+            }
+        }
         
         func authenticationCode(for data: Data, with key: Data) -> Data {
             let key = SymmetricKey(data: key)
