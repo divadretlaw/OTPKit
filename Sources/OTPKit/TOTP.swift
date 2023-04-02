@@ -1,53 +1,62 @@
-import Foundation
+//
+//  TOTP.swift
+//  OTPKit
+//
+//  Created by David Walter on 02.04.23.
+//
 
-/// Time-based One-Time Password version of the `OTP`
-public final class TOTP: OTP {
-    public private(set) var duration: TimeInterval
+import Foundation
+import CryptoKit
+
+/// TOTP: A Time-Based One-Time Password Algorithm
+///
+/// See https://www.rfc-editor.org/rfc/rfc6238 for details
+public struct TOTP {
+    var hotp: HOTP
+    var period: TimeInterval
     
-    /// Time-based One-Time Password
+    /// Creates a Time-based one-time password generator.
     ///
     /// - Parameters:
-    ///     - key: Shared Secret
-    ///     - duration: Time-step duration, must be greater than 0. Default 30s
-    ///     - digits: Number of digits. Must be between 1 and 8. Default 6
-    ///     - mode: Mode used for token generation. Default: SHA1
-    public init?(key: Data, duration: TimeInterval = 30, digits: Int = 6, mode: Mode = .sha1) {
-        guard duration > 0 else { return nil }
-        
-        self.duration = duration
-        
-        super.init(key: key, digits: digits, mode: mode)
+    ///   - key: The symmetric key used to secure the computation.
+    ///   - period: The window that produce the same code. Defaults to 30 seconds.
+    ///   - digits: The number of digits (1 - 10) in the computed authentication code. Defaults to 6.
+    ///   - algorithm: The function to compute the hash with. Defaults to ``OTPAlgorithm/sha1``.
+    public init(key: SymmetricKey, period: TimeInterval = 30, digits: Int = 6, algorithm: OTPAlgorithm = .sha1) {
+        self.hotp = HOTP(key: key, digits: digits, algorithm: algorithm)
+        self.period = period
     }
     
-    /// Time-based One-Time Password
-    /// 
+    /// Creates a Time-based one-time password generator.
+    ///
     /// - Parameters:
-    ///     - secret: Shared Secret in Base32
-    ///     - duration: Time-step duration. Default 30s
-    ///     - digits: Number of digits. Must be between 1 and 8. Default 6
-    ///     - mode: Mode used for token generation. Default: SHA1
-    public init?(secret: String, duration: TimeInterval = 30, digits: Int = 6, mode: Mode = .sha1) {
-        guard duration > 0 else { return nil }
-        
-        self.duration = duration
-        
-        super.init(secret: secret, digits: digits, mode: mode)
+    ///   - key: The symmetric key used to secure the computation.
+    ///   - period: The window that produce the same code. Defaults to 30 seconds.
+    ///   - digits: The number of digits (1 - 10) in the computed authentication code. Defaults to 6.
+    ///   - algorithm: The function to compute the hash with. Defaults to ``OTPAlgorithm/sha1``.
+    public init(key data: Data, period: TimeInterval = 30, digits: Int = 6, algorithm: OTPAlgorithm = .sha1) {
+        self.init(key: SymmetricKey(data: data), period: period, digits: digits, algorithm: algorithm)
     }
     
-    /// Generate current token
+    
+    /// Creates a Time-based one-time password generator.
     ///
-    /// - Returns: Generated Token or nil on error
-    public func generate() -> String? {
-        return generate(date: Date())
+    /// - Parameters:
+    ///   - key: The symmetric key used to secure the computation.
+    ///   - period: The window that produce the same code. Defaults to 30 seconds.
+    ///   - digits: The number of digits (1 - 10) in the computed authentication code. Defaults to 6.
+    ///   - algorithm: The function to compute the hash with. Defaults to ``HashFunction/sha1``.
+    public init?(base32: String, period: TimeInterval = 30, digits: Int = 6, algorithm: OTPAlgorithm = .sha1) {
+        guard let data = Data(base32Encoded: base32) else { return nil }
+        self.init(key: SymmetricKey(data: data), period: period, digits: digits, algorithm: algorithm)
     }
     
-    /// Generate token based on time
+    /// Generate the authentication code for the given timestamp.
     ///
-    /// - Parameter date: Date for when to generate the code
-    /// - Returns: Generated Token or nil on error
-    public func generate(date: Date) -> String? {
-        let seconds = date.timeIntervalSince1970
-        let counter = UInt64(seconds / self.duration)
-        return self.generate(counter: counter)
+    /// - Parameter date: The timestamp to generate the authentication code for. Defaults to now.
+    /// - Returns: The authentication code.
+    public func authenticationCode(for date: Date = Date()) -> String {
+        let counter = uint_fast64_t(date.timeIntervalSince1970 / period)
+        return hotp.authenticationCode(for: counter)
     }
 }

@@ -1,13 +1,11 @@
 # OTPKit
 
-A Swift framework to generate One-time passwords on iOS, macOS, watchOS and tvOS
-
-## Installation
+A Swift framework to generate One-time passwords on iOS, macOS, tvOS and watchOS
 
 ## References
 
-* [HOTP RFC](https://tools.ietf.org/html/rfc4226)
-* [TOTP RFC](https://tools.ietf.org/html/rfc6238)
+* [HOTP RFC](https://www.rfc-editor.org/rfc/rfc4226)
+* [TOTP RFC](https://www.rfc-editor.org/rfc/rfc6238)
 
 ## License
 
