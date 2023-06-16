@@ -45,6 +45,81 @@ final class TOTPTests: XCTestCase {
         XCTAssertEqual(totpSHA256.authenticationCode(for: time20000000000), "77737706")
         XCTAssertEqual(totpSHA512.authenticationCode(for: time20000000000), "47863826")
     }
+    
+    /// TOTP async stream tests
+    func test_async() async throws {
+        let secret = "12345678901234567890"
+        let totp = TOTP(key: Data(secret.utf8), period: 30, digits: 6, algorithm: .sha1)
+        
+        let codeExpecation = XCTestExpectation()
+        codeExpecation.expectedFulfillmentCount = 10
+        let outOfLoopExpecation = XCTestExpectation()
+        
+        let task = Task {
+            for await code in totp.authenticationCodes() {
+                print(code)
+                // Check if the returned code coresponds with a generated code now
+                XCTAssertEqual(code, totp.authenticationCode())
+                codeExpecation.fulfill()
+            }
+            // We should reach this after cancelling the task
+            outOfLoopExpecation.fulfill()
+        }
+        
+        await fulfillment(of: [codeExpecation], timeout: 500)
+        task.cancel()
+        await fulfillment(of: [outOfLoopExpecation])
+    }
+    
+    /// TOTP cancel async stream tests
+    func test_async_cancel() async throws {
+        let secret = "12345678901234567890"
+        let totp = TOTP(key: Data(secret.utf8), period: 30, digits: 6, algorithm: .sha1)
+        
+        let outOfLoopExpecation = XCTestExpectation()
+        
+        let task = Task {
+            try? await Task.sleep(seconds: 5)
+            for await code in totp.authenticationCodes() {
+                print(code)
+                print("Test")
+            }
+            // We should reach this after cancelling the task
+            outOfLoopExpecation.fulfill()
+            print("END")
+        }
+        
+        task.cancel()
+        await fulfillment(of: [outOfLoopExpecation])
+    }
+    
+    /// TOTP collection async stream tests
+    func test_async_collection() async throws {
+        let secret1 = "12345678901234567890"
+        let totp1 = TOTP(key: Data(secret1.utf8), period: 20, digits: 8, algorithm: .sha1)
+        let secret2 = "12345678901234567890123456789012"
+        let totp2 = TOTP(key: Data(secret2.utf8), period: 30, digits: 6, algorithm: .sha1)
+        
+        let codeExpecation = XCTestExpectation()
+        codeExpecation.expectedFulfillmentCount = 5
+        let outOfLoopExpecation = XCTestExpectation()
+        
+        let task = Task {
+            for await codes in [totp1, totp2].authenticationCodes() {
+                print(codes)
+                // Check if the returned code coresponds with a generated code now
+                XCTAssertEqual(codes, [totp1.authenticationCode(), totp2.authenticationCode()])
+                codeExpecation.fulfill()
+            }
+            // We should reach this after cancelling the task
+            outOfLoopExpecation.fulfill()
+        }
+        
+        await fulfillment(of: [codeExpecation], timeout: 200)
+        task.cancel()
+        await fulfillment(of: [outOfLoopExpecation])
+    }
+    
     func test_Encodable() async throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
