@@ -11,10 +11,20 @@ import CryptoKit
 /// HOTP: An HMAC-Based One-Time Password Algorithm
 ///
 /// See https://www.rfc-editor.org/rfc/rfc4226 for details
-public struct HOTP {
-    var key: SymmetricKey
-    var digits: Int
-    var algorithm: OTPAlgorithm
+public struct HOTP: Equatable, Hashable, Codable {
+    internal let key: SymmetricKey
+    
+    /// Number of digits of the one-time password
+    public let digits: Int
+    /// HMAC alogrithm used to compute the one-time password
+    public let algorithm: OTPAlgorithm
+    
+    /// Base32 encoded key
+    public var base32EncodedKey: String {
+        key.withUnsafeBytes { body in
+            Data(body).base32EncodedString()
+        }
+    }
     
     /// Creates a HMAC-based one-time password generator.
     ///
@@ -82,5 +92,46 @@ public struct HOTP {
         let Snum = UInt32(data: Sbits).bigEndian & 0x7FFFFFFF // Convert S to a number in ...2^{31}-1
         let D = UInt64(Snum) % UInt64(pow(10, Double(digits))) // D is a number in the range 0...10^{Digit}-1
         return String(format: "%0*d", digits, D)
+    }
+    
+    // MARK: - Hashable
+    
+    public func hash(into hasher: inout Hasher) {
+        key.withUnsafeBytes { body in
+            hasher.combine(bytes: body)
+        }
+        hasher.combine(digits)
+        hasher.combine(algorithm)
+    }
+    
+    // MARK: - Codable
+    
+    enum CodingKeys: CodingKey {
+        case key
+        case digits
+        case algorithm
+    }
+    
+    // MARK: - Encodable
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(base32EncodedKey, forKey: .key)
+        try container.encode(digits, forKey: .digits)
+        try container.encode(algorithm, forKey: .algorithm)
+    }
+    
+    // MARK: - Decodable
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let base32 = try container.decode(String.self, forKey: .key)
+        guard let data = Data(base32Encoded: base32) else {
+            let context = DecodingError.Context(codingPath: [CodingKeys.key], debugDescription: "Key is not Base32 encoded.")
+            throw DecodingError.dataCorrupted(context)
+        }
+        self.key = SymmetricKey(data: data)
+        self.digits = try container.decode(Int.self, forKey: .digits)
+        self.algorithm = try container.decode(OTPAlgorithm.self, forKey: .algorithm)
     }
 }
