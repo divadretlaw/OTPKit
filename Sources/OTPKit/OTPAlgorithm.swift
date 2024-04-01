@@ -1,6 +1,6 @@
 //
 //  OTPAlgorithm.swift
-//  OTP
+//  OTPKit
 //
 //  Created by David Walter on 02.04.23.
 //

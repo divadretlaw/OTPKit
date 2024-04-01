@@ -12,6 +12,7 @@ import CryptoKit
 ///
 /// See https://www.rfc-editor.org/rfc/rfc4226 for details
 public struct HOTP: Equatable, Hashable, Codable, Sendable {
+    /// Data representation of the key used to secure the computation
     private let data: Data
     
     /// Number of digits of the one-time password
@@ -21,12 +22,10 @@ public struct HOTP: Equatable, Hashable, Codable, Sendable {
     
     /// Base32 encoded key
     public var base32EncodedKey: String {
-        key.withUnsafeBytes { body in
-            Data(body).base32EncodedString()
-        }
+        data.base32EncodedString()
     }
     
-    /// SymmetricKey based created from the key data
+    /// SymmetricKey created from the key data
     internal var key: SymmetricKey {
         SymmetricKey(data: data)
     }
