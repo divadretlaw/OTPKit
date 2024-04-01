@@ -11,8 +11,8 @@ import CryptoKit
 /// HOTP: An HMAC-Based One-Time Password Algorithm
 ///
 /// See https://www.rfc-editor.org/rfc/rfc4226 for details
-public struct HOTP: Equatable, Hashable, Codable {
-    internal let key: SymmetricKey
+public struct HOTP: Equatable, Hashable, Codable, Sendable {
+    private let data: Data
     
     /// Number of digits of the one-time password
     public let digits: Int
@@ -26,6 +26,11 @@ public struct HOTP: Equatable, Hashable, Codable {
         }
     }
     
+    /// SymmetricKey based created from the key data
+    internal var key: SymmetricKey {
+        SymmetricKey(data: data)
+    }
+    
     /// Creates a HMAC-based one-time password generator.
     ///
     /// - Parameters:
@@ -33,7 +38,7 @@ public struct HOTP: Equatable, Hashable, Codable {
     ///   - digits: The number of digits (1 - 10) in the computed authentication code. Defaults to 6.
     ///   - algorithm: The function to compute the hash with. Defaults to ``OTPAlgorithm/sha1``.
     public init(key: SymmetricKey, digits: Int = 6, algorithm: OTPAlgorithm = .sha1) {
-        self.key = key
+        self.data = Data(key)
         self.digits = max(1, min(digits, 10))
         self.algorithm = algorithm
     }
@@ -130,7 +135,7 @@ public struct HOTP: Equatable, Hashable, Codable {
             let context = DecodingError.Context(codingPath: [CodingKeys.key], debugDescription: "Key is not Base32 encoded.")
             throw DecodingError.dataCorrupted(context)
         }
-        self.key = SymmetricKey(data: data)
+        self.data = data
         self.digits = try container.decode(Int.self, forKey: .digits)
         self.algorithm = try container.decode(OTPAlgorithm.self, forKey: .algorithm)
     }

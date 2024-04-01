@@ -11,7 +11,7 @@ import CryptoKit
 /// TOTP: A Time-Based One-Time Password Algorithm
 ///
 /// See https://www.rfc-editor.org/rfc/rfc6238 for details
-public struct TOTP: Equatable, Hashable, Codable {
+public struct TOTP: Equatable, Hashable, Codable, Sendable {
     internal let hotp: HOTP
     
     /// `TimeInterval` the one-time password is valid

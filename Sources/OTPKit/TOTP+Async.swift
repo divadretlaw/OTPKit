@@ -46,7 +46,7 @@ extension TOTP {
     }
 }
 
-extension Collection where Element == TOTP {
+extension Array where Element == TOTP {
     /// `AsyncStream` of authentication codes. Will yield one code per start of the next period.
     ///
     /// - Parameter period: Optional period on when to yield the next code.
